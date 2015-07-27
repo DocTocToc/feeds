@@ -29,6 +29,7 @@ from ..managers import FeedManager
 from ..feedexceptions import FeedErrorHTTP, FeedErrorParse, FeedSame
 from .site import Site
 from .category import Category
+from .tag import Tag
 
 logger = logging.getLogger(__name__)
 
@@ -132,129 +133,175 @@ class Feed(models.Model):
         related_name="category_feeds",
         blank=True,
     )
-
-    # <rss><channel>
-    # mandatory fields
-    title = models.CharField(
-        _('title'),
-        max_length=200,
-        blank=True
-    )
-    link = models.URLField(
-        _('link'),
-        blank=True
-    )
-    tagline = models.TextField(
-        _('description'),
-        blank=True,
-        help_text=_('Phrase or sentence describing the channel.'),
-    )
-
-    # <rss><channel>
-    # optional fields
-    language = models.CharField(
-        _('language'),
-        blank=True,
-        max_length=8,
-    )
-    copyright = models.CharField(
-        _('copyright'),
-        blank=True,
-        max_length=64,
-    )
-
-    author = models.CharField(
-        _('managingEditor'),
-        blank=True,
-        max_length=64,
-    )
-
-    webmaster = models.CharField(
-        _('webmaster'),
-        blank=True,
-        max_length=64,
-    )
-
-    pubDate = models.DateTimeField(_('pubDate'), null=True, blank=True)
-    last_modified = models.DateTimeField(
-        _('lastBuildDate'),
-        null=True,
-        blank=True
-    )
-
-    # Category
-    category = models.ManyToManyField(
-        Category,
-        related_name="category_feeds",
-        blank=True,
-    )
-    # generator
-    # docs
-    # cloud
-
-    ttl = models.IntegerField(
-        _("""
-          TTL stands for time to live.
-          It's a number of minutes that indicates how long a
-          channel can be cached before refreshing from the source.
-          """
-          ),
-        default=60
-    )
-
-    image_title = models.CharField(
-        _('image_title'),
-        max_length=200,
-        blank=True
-    )
-
-    image_link = models.URLField(
-        _('image_link'),
-        blank=True
-    )
-
-    image_url = models.URLField(
-        _('image_url'),
-        blank=True
-    )
-
-    # rating
-    # textInput
-    # skipHours
-    # skipDay
-
-    # http://feedparser.org/docs/http-etag.html
-    etag = models.CharField(
-        _('etag'),
-        max_length=50,
-        blank=True
-    )
-
     last_checked = models.DateTimeField(
         _('last checked'),
         null=True,
         blank=True,
         auto_now=True
     )
-
-    check_interval = models.IntegerField(
-        _('Interval in Minutes between checks.'),
-        default=5
-    )
-
-    ignore_ca = models.BooleanField(
-        _('Indicates whether CA for this certificate should be ignored'),
-        default=True
-    )
-    """Do (not) verify certificate authenticity."""
-
     announce_posts = models.BooleanField(default=False)
     """Whether to socially announce new articles posts"""
+
+    """
+    feedparser fields
+    =================
+
+    For all fields below, see:
+    https://pythonhosted.org/feedparser/reference.html
+    """
+    bozo = models.BooleanField(default=False)
+    bozo_exception = models.CharField(max_length=64)
+    encoding = models.CharField(max_length=64)
+    # http://feedparser.org/docs/http-etag.html
+    etag = models.CharField(
+        _('etag'),
+        max_length=50,
+        blank=True
+    )
+    author = models.CharField(
+        _('managingEditor'),
+        blank=True,
+        max_length=64,
+    )
+
+    # author_detail
+
+    # cloud
+
+    # contributors
+
+    # docs
+
+    # errorreportsto
+
+    # generator
+
+    # generator_detail
+
+    # icon
+
+    # id
+
+    # image
+    # feed.image.href
+    # feed.image.link
+    # feed.image.width
+    # feed.image.height
+    # feed.image.description
+    image_href = models.URLField(
+        _('image href'),
+        blank=True
+    )
+    image_link = models.URLField(
+        _('image_link'),
+        blank=True
+    )
+    image_description = models.CharField(
+        _('image description'),
+        max_length=200,
+        blank=True
+    )
+
+    # info
+
+    # info_detail
+
+    language = models.CharField(
+        _('language'),
+        blank=True,
+        max_length=8,
+    )
+    license = models.CharField(
+        _('license'),
+        blank=True,
+        max_length=8,
+    )
+    link = models.URLField(
+        _('link'),
+        blank=True
+    )
+
+    # links - through ForeignKey in Links
+
+    logo = models.URLField(
+        _('logo'),
+        blank=True,
+        max_length=256,
+    )
+
+    published = models.DateTimeField()
+
+    # published_parsed
+
+    publisher = models.CharField(
+        _('Publisher'),
+        blank=True,
+        max_length=256,
+    )
+
+    # publisher_detail
+
+    rights = models.CharField(
+        _('rights'),
+        blank=True,
+        max_length=256,
+    )
+
+    # rights_detail
+
+    subtitle = models.CharField(
+        _('Subtitle'),
+        blank=True,
+        max_length=256,
+    )
+
+    # subtitle_detail
+
+    tags = models.ForeignKey(Tag)
+
+    title = models.CharField(
+        _('title'),
+        max_length=200,
+        blank=True
+    )
+
+    # title_detail
+
+    ttl = models.IntegerField(
+        _("""
+            TTL stands for time to live.
+            It's a number of minutes that indicates how long a
+            channel can be cached before refreshing from the source.
+            """),
+        default=60
+        )
+
+    updated = models.DateTimeField()
+
+    # updated_parsed
+
+    # headers
+
+    # modified
+
+    # namespaces
+
+    # status
+
+    # version
+
+    # end of feedparser
+
+    # rating
+    # textInput
+    # skipHours
+    # skipDay
 
     objects = FeedManager()
 
     def save(self, *args, **kwargs):
         """
+        Override save.
         """
         return super(Feed, self).save(*args, **kwargs)
 
@@ -402,9 +449,8 @@ class Feed(models.Model):
             self.slug = slugify(self.name)
 
         self.etag = parsed.get('etag', '')
-        self.pubdate = parsed.feed.get('pubDate', '')
         try:
-            self.last_modified = datetime.datetime.utcfromtimestamp(
+            self.updated = datetime.datetime.utcfromtimestamp(
                 calendar.timegm(
                     parsed.feed.get('updated_parsed', self.updated)
                 )
@@ -522,3 +568,38 @@ class Feed(models.Model):
         Return the number of subscribers for this feed.
         """
         return self.feed_subscription.count()
+
+
+class Link(models.Model):
+    """
+    feed.links
+
+    feed.links[i].rel -
+        alternate
+        enclosure
+        related
+        self
+        via
+    feed.links[i].type
+    feed.links[i].href
+    feed.links[i].title
+    """
+    feed = models.ForeignKey(
+        Feed,
+        _('links'),
+        related_name='links',
+        blank=False,
+        null=False
+    )
+
+    rel = models.CharField(max_length=1, )
+    """The relationship of this feed link."""
+    type = models.CharField(max_length=32)
+    """The content type of the page that this feed link points to."""
+    href = models.CharField(max_length=256)
+    """The URL of the page that this feed link points to."""
+    title = models.CharField(max_length=64)
+    """The title of this feed link."""
+
+    def __unicode__(self):
+        return self.title
